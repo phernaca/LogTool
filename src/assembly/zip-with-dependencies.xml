@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<assembly
+	xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0 http://maven.apache.org/xsd/assembly-1.1.0.xsd">
+	<id>zip-with-dependencies</id>
+	<formats>
+		<format>zip</format>
+	</formats>
+	<includeBaseDirectory>false</includeBaseDirectory>
+	<dependencySets>		
+	    <dependencySet>
+	      <outputDirectory>/M990_Instance/lib</outputDirectory>
+			<useProjectArtifact>true</useProjectArtifact>
+			<unpack>false</unpack>
+			<scope>runtime</scope>	           
+	      <includes>	        
+	        <include>com.thalesgroup.sysecc:sysecc-commons:jar:${sysecc-commons.version}</include>
+	        <include>com.thalesgroup.sugecom:sugecom:jar:${sugecom.version}</include>
+	      </includes>
+	    </dependencySet> 
+	     
+		<dependencySet>
+			<outputDirectory>/lib</outputDirectory>
+			<useProjectArtifact>true</useProjectArtifact>
+			<unpack>false</unpack>
+			<scope>runtime</scope>
+			<excludes>
+				<!--<exclude>com.airbus.sugecom:migration</exclude>-->
+				<exclude>javax.servlet:servlet-api</exclude>
+				<exclude>avalon-framework:avalon-framework</exclude>
+				<exclude>org.topcased.gpm:gPM-instance-package</exclude>
+				<exclude>com.thalesgroup.sysecc:sysecc-commons</exclude>
+			</excludes>
+		</dependencySet>
+	</dependencySets>
+		
+	<fileSets>
+		<fileSet>
+			<directory>src/files/</directory>
+			<outputDirectory>/</outputDirectory>
+			<includes>
+				<include>*</include>
+				<include>**/*.*</include>
+			</includes>
+		</fileSet>
+		<fileSet>
+			<filtered>true</filtered>
+			<directory>src/main/delivery/</directory>
+			<outputDirectory>/</outputDirectory>
+			<includes>
+				<include>*.bat</include>
+			</includes>
+			<excludes>
+				<exclude>*.*sh</exclude>
+			</excludes>			
+		</fileSet>	
+		<fileSet>
+			<filtered>true</filtered>
+			<directory>src/main/resources/</directory>
+			<outputDirectory>/classes/</outputDirectory>
+			<includes>
+				<include>*.properties</include>
+			</includes>
+		</fileSet>			
+	</fileSets>
+</assembly>
