@@ -227,6 +227,7 @@ public class LogsMigrationAction {
 				String failedDir= parser.getWtHomeDir() + PALMA_FAILURES_PATH;
 				String jvmId= parser.getJvmId();
 				String checkDate = parser.getCheckDateOption();
+				String outputConsolidate = parser.getOutputConsolidateOption();
 				String outputLogDir = parser.getOutputLogDir();
 
 				// Create a new MigrationAction object
@@ -260,9 +261,14 @@ public class LogsMigrationAction {
 		            
 				}
 				
+				/* And obtain as well the log file containing the error lines of the Load process */
+				if(StringUtils.isBlank(outputConsolidate)) {
+					outputConsolidate = LogsProcessor.NO_VALUE;
+				}
+				
 				/* Obtain boolean value for flag to ignore older files than given date 'logs_migration.failure.cutoffDelta' */
 				boolean checkDateAfter =  true;
-				if(StringUtils.isNotBlank(checkDate) && StringUtils.containsIgnoreCase(checkDate, "no")) {
+				if(StringUtils.isNotBlank(checkDate) && StringUtils.containsIgnoreCase(checkDate, LogsProcessor.NO_VALUE)) {
 					checkDateAfter = false;
 				}
 				
@@ -295,6 +301,7 @@ public class LogsMigrationAction {
 					context.set(Context.CSV_COLS_SEP_KEY,loadCsvColsSeparator);
 					context.set(Context.FAILURES_FILE_KEY,lastFailFile);
 					context.set(Context.JVM_ID_KEY,jvmId);
+					context.set(Context.OUTPUT_CONSOLIDATE_KEY, outputConsolidate);
 					context.set(Context.LOG_ERROR_FILE_KEY,actionErrLogFile);
 					context.set(Context.INPUT_KEY, inputDir);
 					context.set(Context.WT_LOGS_KEY, logsDir);

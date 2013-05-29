@@ -19,6 +19,7 @@ public class LogsMigrationCommandLineParser {
 	public static String INPUT_DIRECTORY_OPTION = "id";
 	public static String WT_HOME_OPTION = "wt";
 	public static String DATE_OPTION = "dt";
+	public static String OUT_CONSOLIDATE_OPTION = "oc";
 	public static String JVM_ID_OPTION = "vm";
 	public static String OUTPUT_LOG_DIRECTORY_OPTION = "old";
 	
@@ -66,6 +67,11 @@ public class LogsMigrationCommandLineParser {
 		.withDescription("check for after date (yes/no). By default is 'yes'")
 		.create(DATE_OPTION);
 		
+		Option outConsolidate = OptionBuilder.withArgName("consolidate")
+		.hasArg()
+		.withDescription("consolidate output in one file (yes/no). By default is 'no'")
+		.create(OUT_CONSOLIDATE_OPTION);
+		
 		Option outputLogDir = OptionBuilder.withArgName("outputLogDirectory")
 		.hasArg()
 		.withDescription("use given output logs directory (full name)")
@@ -76,6 +82,7 @@ public class LogsMigrationCommandLineParser {
 		inputDir.setRequired(true);
 		wtDir.setRequired(true);
 		jvmId.setRequired(false);
+		outConsolidate.setRequired(false);
 		checkDate.setRequired(false);
 		outputLogDir.setRequired(true);
 
@@ -84,6 +91,7 @@ public class LogsMigrationCommandLineParser {
 		options.addOption(inputDir);
 		options.addOption(wtDir);
 		options.addOption(checkDate);
+		options.addOption(outConsolidate);
 		options.addOption(jvmId);
 		options.addOption(outputLogDir);		
 
@@ -181,6 +189,11 @@ public class LogsMigrationCommandLineParser {
 		return commandLine.getOptionValue(DATE_OPTION);
 	}
 	
+	
+	public String getOutputConsolidateOption() {
+		return commandLine.getOptionValue(OUT_CONSOLIDATE_OPTION);
+	}
+
 	public String getWtHomeDir() {
 		return wtHomeDir;
 	}

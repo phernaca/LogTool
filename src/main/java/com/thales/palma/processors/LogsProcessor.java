@@ -23,6 +23,17 @@ public interface LogsProcessor {
 	public static final String SEP_LINE_ID = "|";
 	
 	/**
+	 * NO (Negative) value Option in Command Line
+	 */
+	public static final String NO_VALUE = "no";
+	
+	/**
+	 * YES (Positive) value Option in Command Line
+	 */
+	public static final String YES_VALUE = "yes";
+	
+	
+	/**
 	 * Initializes the implementation class with Objects containing 
 	 * all the needed information for processing (logs and input csv)files
 	 * @param config

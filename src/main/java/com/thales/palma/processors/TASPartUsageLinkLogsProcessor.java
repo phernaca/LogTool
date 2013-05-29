@@ -2,9 +2,12 @@ package com.thales.palma.processors;
 
 import java.util.Map;
 
+import org.apache.commons.io.LineIterator;
 import org.apache.commons.lang.StringUtils;
 
 public class TASPartUsageLinkLogsProcessor extends AbstractLogsProcessor {
+
+	private static final String UNIQUENESS_CONSTRAINT_VIOLATION = "wt.pom.UniquenessException: A datastore uniqueness constraint violation";
 
 	@Override
 	protected boolean containsObjectLineId(String currentLine, String objectId) {
@@ -48,5 +51,17 @@ public class TASPartUsageLinkLogsProcessor extends AbstractLogsProcessor {
 		return objectId.toString();
 		
 	}
+	
+	@Override
+	protected String obtainErrorLogDescription(LineIterator logFileIter) {
+		String descErrLogLine = logFileIter.nextLine();
+		if(StringUtils.startsWith(descErrLogLine.trim(), UNIQUENESS_CONSTRAINT_VIOLATION)) {
+			descErrLogLine +=" : " + logFileIter.nextLine();
+		}
+		
+		actionLoggerGeneric.info("Error Description : " + descErrLogLine);
+		return descErrLogLine;
+	}
+	
 
 }

@@ -60,9 +60,10 @@ public abstract class AbstractLogsProcessor implements LogsProcessor {
     protected Collection<File> csvInputFiles;
     protected File csvFailureFile;
     
-    
     protected String outputCsvFailFileName;
 	
+    protected boolean consolidateOutputFile = false;
+    
 	public Context getContext() {
 		
 		return context;
@@ -79,6 +80,11 @@ public abstract class AbstractLogsProcessor implements LogsProcessor {
 		this.csvFailureFile = (File)context.get(Context.FAILURES_FILE_KEY);
 		this.csvInputFiles = (Collection<File>)context.get(Context.CSV_INPUT_FILES_KEY);
 		this.csvSeparator = (String)context.get(Context.CSV_COLS_SEP_KEY);
+		
+		/* Set positive boolean value according to the Context   */
+		if(LogsProcessor.YES_VALUE.equals((String)context.get(Context.OUTPUT_CONSOLIDATE_KEY))) {
+			this.consolidateOutputFile = true;
+		}
 		
 		outputCsvFailFileName = this.config.getString("logs_migration." + getCsvLoadKey() + ".fail_file_name", "objsFailed");
 		
@@ -111,7 +117,7 @@ public abstract class AbstractLogsProcessor implements LogsProcessor {
 			
 			
 			
-		//	List<String> failedFormattedLines = null;
+			/* Proceed only if the Errors File for the current action is there */
 			if(actionErrorsLogFile != null) {
 				
 				actionLoggerGeneric.info("Line Errors descriptions at File : " + actionErrorsLogFile.getName());
@@ -124,31 +130,22 @@ public abstract class AbstractLogsProcessor implements LogsProcessor {
 				
 				findErrorLinesInCsvFiles(actionErrorsLogFile,csvErrorsFiles,failedFormattedLines);
 				
-				/* Proceed to write the Failures in a CSV format */
-				CSVWriter failsWriter = new CSVWriter(
-						new FileWriter(getContext().get(Context.OUTPUT_KEY) 
-										+ File.separator 
-										+ outputCsvFailFileName
-										+ "_" + (String)context.get(Context.JVM_ID_KEY)
-										+".csv"), ';' );
-				/* Browse all the CSV Files */ 
-				List<String> csvInputFiles = new ArrayList<String>(csvErrorsFiles.keySet());
-				Collections.sort(csvInputFiles);
-				for(String csvInputFileKey : csvInputFiles) {
-					
-					CsvErrorFile csvErrFile = csvErrorsFiles.get(csvInputFileKey);
-					
-					List<CsvErrorLine> csvErrLines = csvErrFile.getCsvLines();
-					for(CsvErrorLine csvErrLine : csvErrLines) {
-						
-						String[] entries = (csvErrFile.getFileName() + CSV_SEP_STRING + csvErrLine.toString()).split(CSV_SEP_STRING);
-						failsWriter.writeNext(entries);
-						//	System.out.println(csvErrFile.getFileName() + ";" + csvErrLine.toString()); 	/**/
-					}
-				}
-				failsWriter.close();
-				//List<String> tasCsvSortedCols = new ArrayList<String>(
 				
+				
+				/* 1st Goal : Proceed to write the Failures in a CSV format */
+				String csvJvmOutputFileName = getContext().get(Context.OUTPUT_KEY) + File.separator 
+												+ outputCsvFailFileName
+												+ "_" + (String)context.get(Context.JVM_ID_KEY)+".csv";
+				
+				File csvJvmOutputFile = obtainCsvJvmOutputFile(csvErrorsFiles, csvJvmOutputFileName);
+				/* Consolidate in one file if requested */
+				if(isConsolidateOutputFile()) {
+					consolidateCsvFile(csvJvmOutputFile);
+				}
+				
+				
+				
+				/* 2nd Goal : Put an output CSV file into the TASB csvmapfile format */
 				if(CollectionUtils.isNotEmpty(failedFormattedLines)) {
 					
 					/* Generate the output file with the expected TAS format */
@@ -171,6 +168,58 @@ public abstract class AbstractLogsProcessor implements LogsProcessor {
 		
 				
 				
+	}
+
+	/**
+	 * @param csvJvmOutputFile
+	 * @throws IOException
+	 */
+	protected void consolidateCsvFile(File csvJvmOutputFile) throws IOException {
+		if( csvJvmOutputFile!=null && csvJvmOutputFile.length()>0L ) {
+			
+			String csvOutConsolidateFileName = getContext().get(Context.OUTPUT_KEY) + File.separator 
+										+ outputCsvFailFileName
+										+ "_consolidate.csv";
+			
+			File csvConsolidateFile = new File(csvOutConsolidateFileName);
+			FileUtils.writeLines(csvConsolidateFile, FileUtils.readLines(csvJvmOutputFile),true);
+			
+		}
+	}
+
+	/**
+	 * 
+	 * @param csvErrorsFiles
+	 * @param csvJvmOutputFileName
+	 * @return
+	 * @throws IOException
+	 */
+	protected File obtainCsvJvmOutputFile(
+			Map<String, CsvErrorFile> csvErrorsFiles,
+			String csvJvmOutputFileName) throws IOException {
+		
+		File csvJvmOutputFile = new File(csvJvmOutputFileName);
+		
+		CSVWriter failsWriter = new CSVWriter(
+				new FileWriter(csvJvmOutputFile), ';' );
+		
+		/* Browse all the CSV Files */ 
+		List<String> csvInputFiles = new ArrayList<String>(csvErrorsFiles.keySet());
+		Collections.sort(csvInputFiles);
+		for(String csvInputFileKey : csvInputFiles) {
+			
+			CsvErrorFile csvErrFile = csvErrorsFiles.get(csvInputFileKey);
+			
+			List<CsvErrorLine> csvErrLines = csvErrFile.getCsvLines();
+			for(CsvErrorLine csvErrLine : csvErrLines) {
+				
+				String[] entries = (csvErrFile.getFileName() + CSV_SEP_STRING + csvErrLine.toString()).split(CSV_SEP_STRING);
+				failsWriter.writeNext(entries);
+			}
+		}
+		failsWriter.close();
+		
+		return csvJvmOutputFile;
 	}
 
 	/**
@@ -362,9 +411,7 @@ public abstract class AbstractLogsProcessor implements LogsProcessor {
 				
 				errDescFound = true;
 				/* obtain next lines (contains the description) */
-				String descErrLogLine = logFileIter.nextLine();
-				
-				actionLoggerGeneric.info("Error Description : " + descErrLogLine);
+				String descErrLogLine = obtainErrorLogDescription(logFileIter);
 				
 				CsvErrorFile csvError = null;
 				if(csvErrorFiles.containsKey(csvInFile.getName())) {
@@ -383,6 +430,18 @@ public abstract class AbstractLogsProcessor implements LogsProcessor {
 			}
 			 
 		}
+	}
+
+	/**
+	 * Default  Error Description
+	 * @param logFileIter
+	 * @return
+	 */
+	protected String obtainErrorLogDescription(LineIterator logFileIter) {
+		String descErrLogLine = logFileIter.nextLine();
+		
+		actionLoggerGeneric.info("Error Description : " + descErrLogLine);
+		return descErrLogLine;
 	}
 
 	
@@ -522,6 +581,10 @@ public abstract class AbstractLogsProcessor implements LogsProcessor {
 
 	protected String getCsvSeparator() {
 		return csvSeparator;
+	}
+
+	public boolean isConsolidateOutputFile() {
+		return consolidateOutputFile;
 	}
 
 	

@@ -6,6 +6,7 @@ public interface Context {
 	public static final String PROCESSOR_CLASS_KEY = "logs_processor_class";
 	public static final String CSV_INPUT_FILES_KEY = "input_csv_files";
 	public static final String FAILURES_FILE_KEY = "failures_csv_file";
+	public static final String OUTPUT_CONSOLIDATE_KEY = "output_consolidate";
 	public static final String JVM_ID_KEY = "jvm_id";
 	public static final String INPUT_KEY = "input";
 	public static final String FAILED_KEY = "failed";
