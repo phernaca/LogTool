@@ -53,7 +53,7 @@ public class TASPartUsageLinkLogsProcessor extends AbstractLogsProcessor {
 	}
 	
 	@Override
-	protected String obtainErrorLogDescription(LineIterator logFileIter) {
+	protected String obtainErrorLogDescription(LineIterator logFileIter, String objectId) {
 		String descErrLogLine = logFileIter.nextLine();
 		if(StringUtils.startsWith(descErrLogLine.trim(), UNIQUENESS_CONSTRAINT_VIOLATION)) {
 			descErrLogLine +=" : " + logFileIter.nextLine();

@@ -21,7 +21,7 @@ public class TASComponentLogsProcessor extends AbstractLogsProcessor {
 	@Override
 	protected boolean containsObjectLineId(String currentLine, String objectId) {
 
-		return StringUtils.endsWithIgnoreCase(currentLine, objectId);
+		return StringUtils.containsIgnoreCase(currentLine, objectId);
 	}
 	
 	

@@ -410,8 +410,8 @@ public abstract class AbstractLogsProcessor implements LogsProcessor {
 			if(containsObjectLineId(line, objectId)) {
 				
 				errDescFound = true;
-				/* obtain next lines (contains the description) */
-				String descErrLogLine = obtainErrorLogDescription(logFileIter);
+				/* obtain lines containing the description */
+				String descErrLogLine = obtainErrorLogDescription(logFileIter, objectId);
 				
 				CsvErrorFile csvError = null;
 				if(csvErrorFiles.containsKey(csvInFile.getName())) {
@@ -435,9 +435,10 @@ public abstract class AbstractLogsProcessor implements LogsProcessor {
 	/**
 	 * Default  Error Description
 	 * @param logFileIter
+	 * @param objectId defined by each specific sub processor
 	 * @return
 	 */
-	protected String obtainErrorLogDescription(LineIterator logFileIter) {
+	protected String obtainErrorLogDescription(LineIterator logFileIter, String objectId) {
 		String descErrLogLine = logFileIter.nextLine();
 		
 		actionLoggerGeneric.info("Error Description : " + descErrLogLine);
@@ -476,15 +477,19 @@ public abstract class AbstractLogsProcessor implements LogsProcessor {
 		
 		String[] csvValues = StringUtils.splitPreserveAllTokens(failedLine, getCsvSeparator());
 		
-		/* Check if number of columns is the same*/
-		if(sortedColNames.length+1 !=  csvValues.length) {
-			actionLoggerGeneric.warning("Col Names " + sortedColNames.length + " vs Col Values " + csvValues.length);
-		}
-		
-		//split(failedLine, getCsvSeparator());
-		for(int i=1; i<csvValues.length; i++) {
-			
-			tmpCsvMapLine.put(sortedColNames[i-1], csvValues[i]);
+		// Treate only if load key is the same as context load action key
+		if (context.get(context.LOAD_ACTION_KEY).equals(csvValues[0])) {
+			/* Check if number of columns is the same*/
+			if(sortedColNames.length+1 !=  csvValues.length) {
+				actionLoggerGeneric.warning("Col Names " + sortedColNames.length + " vs Col Values " + csvValues.length);
+			}
+			//else {
+				//split(failedLine, getCsvSeparator());
+				for(int i=1; i<csvValues.length; i++) {
+
+					tmpCsvMapLine.put(sortedColNames[i-1], csvValues[i]);
+				}
+			//}
 		}
 		
 		return tmpCsvMapLine;
