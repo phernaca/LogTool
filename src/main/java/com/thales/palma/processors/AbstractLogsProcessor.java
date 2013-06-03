@@ -475,19 +475,23 @@ public abstract class AbstractLogsProcessor implements LogsProcessor {
 		
 		Map<String,String> tmpCsvMapLine = new HashMap<String,String>();
 		
-		String[] csvValues = StringUtils.splitPreserveAllTokens(failedLine, getCsvSeparator());
+		String[] rawCsvValues = StringUtils.splitPreserveAllTokens(failedLine, getCsvSeparator());
+		
+		
 		
 		// Treate only if load key is the same as context load action key
-		if (context.get(context.LOAD_ACTION_KEY).equals(csvValues[0])) {
+		if (context.get(context.LOAD_ACTION_KEY).equals(rawCsvValues[0])) {
+			
+			String[] filteredCsvValues = filterCsvValues(rawCsvValues);
 			/* Check if number of columns is the same*/
-			if(sortedColNames.length+1 !=  csvValues.length) {
-				actionLoggerGeneric.warning("Col Names " + sortedColNames.length + " vs Col Values " + csvValues.length);
+			if(sortedColNames.length+1 !=  filteredCsvValues.length) {
+				actionLoggerGeneric.warning("Col Names " + sortedColNames.length + " vs Col Values " + filteredCsvValues.length);
 			}
 			//else {
 				//split(failedLine, getCsvSeparator());
-				for(int i=1; i<csvValues.length; i++) {
-
-					tmpCsvMapLine.put(sortedColNames[i-1], csvValues[i]);
+				for(int i=1; i<filteredCsvValues.length; i++) {
+					
+					tmpCsvMapLine.put(sortedColNames[i-1], filteredCsvValues[i]);
 				}
 			//}
 		}
@@ -524,6 +528,16 @@ public abstract class AbstractLogsProcessor implements LogsProcessor {
 
     }
 	
+    
+    /**
+     * Iddle implementation: Do nothing
+     * @param rawValues
+     * @return
+     */
+    protected  String[] filterCsvValues(String[] rawValues) {
+    	
+    	return rawValues;
+    }
 	
     /**
      * Initialize the Loggers for the current File Processor.
@@ -571,6 +585,8 @@ public abstract class AbstractLogsProcessor implements LogsProcessor {
      * @return
      */
     protected abstract boolean containsObjectLineId(String currentLine, String objectId);
+    
+    
     
 	protected String getCsvLoadKey() {
 		return csvLoadKey;
