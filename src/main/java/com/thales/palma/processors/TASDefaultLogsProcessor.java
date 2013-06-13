@@ -71,7 +71,7 @@ public class TASDefaultLogsProcessor  extends AbstractLogsProcessor {
 		
 		boolean isValOmmited = false;
 		
-		if(StringUtils.startsWith(rawValue, "wt.doc.WTDocument") 
+		if(StringUtils.equals(rawValue.trim(), "wt.doc.WTDocument") 
 				|| (StringUtils.equals(rawValue, "ECP") || (StringUtils.equals(rawValue, "RFD")))
 				|| 	StringUtils.startsWith(rawValue, "com.ptc.")	) {
 			

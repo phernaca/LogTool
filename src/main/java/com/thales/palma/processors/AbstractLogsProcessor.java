@@ -16,9 +16,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.logging.FileHandler;
 import java.util.logging.Formatter;
+import java.util.logging.Level;
 import java.util.logging.LogRecord;
 
 import org.apache.commons.collections.CollectionUtils;
@@ -30,7 +30,6 @@ import org.apache.commons.io.LineIterator;
 import org.apache.commons.io.comparator.LastModifiedFileComparator;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.math.JVMRandom;
 
 import au.com.bytecode.opencsv.CSVWriter;
 
@@ -45,6 +44,10 @@ public abstract class AbstractLogsProcessor implements LogsProcessor {
 	
 
 	protected java.util.logging.Logger actionLoggerGeneric;
+	
+	protected java.util.logging.Logger actionLoggerOK; 
+	
+    protected java.util.logging.Logger actionLoggerKO;
 	
 	public static String F_SEPARATOR = "_";
 	
@@ -88,8 +91,13 @@ public abstract class AbstractLogsProcessor implements LogsProcessor {
 		
 		outputCsvFailFileName = this.config.getString("logs_migration." + getCsvLoadKey() + ".fail_file_name", "objsFailed");
 		
-		/* And initialize the logger */
-		actionLoggerGeneric = java.util.logging.Logger.getLogger(this.csvLoadKey);
+		/* And initialize all the current Processor Loggers : Generic, OK and KO loggers */
+		actionLoggerGeneric = java.util.logging.Logger.getLogger(getCsvLoadKey() + F_SEPARATOR + GEN_TOKEN);
+		
+		actionLoggerOK =
+				java.util.logging.Logger.getLogger(getCsvLoadKey() + F_SEPARATOR + OK_TOKEN); 
+		actionLoggerKO = 
+				java.util.logging.Logger.getLogger(getCsvLoadKey() + F_SEPARATOR + KO_TOKEN);
 		
 		
 		initActionLoggers();
@@ -157,7 +165,10 @@ public abstract class AbstractLogsProcessor implements LogsProcessor {
 				
 			} else {
 				
-				actionLoggerGeneric.info("No errors found loading action : " + (String)context.get(Context.LOAD_ACTION_KEY) + "for JVM : " + (String)context.get(Context.JVM_ID_KEY) + actionErrorsLogFile.getName());
+				if(actionLoggerGeneric.isLoggable(Level.INFO)) {
+					actionLoggerGeneric.info("No errors found loading action : " + (String)context.get(Context.LOAD_ACTION_KEY) + "for JVM : " + (String)context.get(Context.JVM_ID_KEY));
+				}
+				
 			}
 			
 			
@@ -239,6 +250,8 @@ public abstract class AbstractLogsProcessor implements LogsProcessor {
 		String[] alphaSortedCsvColNames = tasCsvColNames.clone();
 		Arrays.sort(alphaSortedCsvColNames);
 		
+		/* Initialize action error log file line number */
+		int lineNumber = 1;
 		/* Obtain Line Iterator for the Error Line Descriptions File */
 		LineIterator logErrFileIter = IOUtils.lineIterator(new FileReader(actionErrorsLogFile));
 		
@@ -250,7 +263,9 @@ public abstract class AbstractLogsProcessor implements LogsProcessor {
 			/* Proceed with one failed line */
 			processFailedLine(csvErrorsFiles, tasCsvColNames,
 					alphaSortedCsvColNames, logErrFileIter,
-					failedFormattedLines, failedLine);
+					failedFormattedLines, failedLine, lineNumber);
+			
+			lineNumber++;
 		}
 		
 		
@@ -269,7 +284,7 @@ public abstract class AbstractLogsProcessor implements LogsProcessor {
 	protected void processFailedLine(Map<String, CsvErrorFile> csvErrorsFiles,
 			String[] tasCsvColNames, String[] alphaSortedCsvColNames,
 			LineIterator logErrFileIter, List<String> failedFormattedLines,
-			String failedLine) throws IOException {
+			String failedLine, int lineNumber) throws IOException {
 		actionLoggerGeneric.info("Looking for failed : " + failedLine);
 		
 		/* First obtain the map with cols mapping the TAS csv format */
@@ -279,15 +294,45 @@ public abstract class AbstractLogsProcessor implements LogsProcessor {
 		/* Proceed obtaining the input csv line and the matching error description */
 		boolean foundLine = findLineOnCsv(tasCsvColNames, tmpFailedMapLine, csvErrorsFiles, logErrFileIter);
 		
+		if(!foundLine) {
+			
+			StringBuilder allTASLineStr = new StringBuilder();
+			for(int i=0; i<alphaSortedCsvColNames.length; i++) {
+				
+				if(i>0) {
+					allTASLineStr.append(SEP_LINE_ID);
+				}
+				
+				allTASLineStr.append(tmpFailedMapLine.get(alphaSortedCsvColNames[i]));
+			}
+			
+			
+			/* Trace the Problem in the KO Logging file */
+			actionLoggerKO.log(Level.SEVERE, "Line " 
+											+ lineNumber 
+											+ " Not found. Line Contents: " 
+											+ allTASLineStr.toString());
+			
+			actionLoggerGeneric.severe("Line NOT Found: " + allTASLineStr.toString());
+		}
+		
 		
 		/* Obtain the failed formatted into the TAS one */
 		String reformatFailedLine = obtainTASFailedLine(tasCsvColNames, tmpFailedMapLine);
-		if(StringUtils.isNotBlank(reformatFailedLine)) {
+		if(foundLine && StringUtils.isNotBlank(reformatFailedLine)) {
 			failedFormattedLines.add(reformatFailedLine);
 		} else {
 			
-			//TODO Log It!
+			foundLine = false;
 		}
+		
+		
+		/* Finally if line treatment is OK then Log it in OK file */
+		if(foundLine) {
+			actionLoggerOK.log(Level.SEVERE, "Line " 
+					+ lineNumber 
+					+ " successfully found and treated.");
+		}	
 	}
 
 	/**
@@ -318,72 +363,77 @@ public abstract class AbstractLogsProcessor implements LogsProcessor {
 	 * @param tasCsvColNames
 	 * @param tmpFailedMapLine
 	 * @param foundLine
-	 * @throws IOException
 	 */
 	protected boolean findLineOnCsv(String[] tasCsvColNames,
 			Map<String, String> tmpFailedMapLine,
 			Map<String,CsvErrorFile> csvErrorFiles,
-			LineIterator logFileIter)
-			throws IOException {
+			LineIterator logFileIter) {
 		
 		boolean foundLine = false;
 		
 		Iterator<File> csvInIter = getCsvInputFiles().iterator();
 		while(!foundLine &&  csvInIter.hasNext()) {
 			
-			File csvInFile = csvInIter.next();
-			/* Obtain all the Input lines from a CSV and search for the failed one */
-			List<String> inputLines = FileUtils.readLines(csvInFile);
-			
-			int lineIdx = 0;
-			Iterator<String> inputLinesIter = inputLines.iterator();
-			while(!foundLine &&  inputLinesIter.hasNext()) {
+			try {
 				
-				String inputLine = inputLinesIter.next();
-				lineIdx++;
+				File csvInFile = csvInIter.next();
+				/* Obtain all the Input lines from a CSV and search for the failed one */
+				List<String> inputLines = FileUtils.readLines(csvInFile);
 				
-				try {
+				int lineIdx = 0;
+				Iterator<String> inputLinesIter = inputLines.iterator();
+				while(!foundLine &&  inputLinesIter.hasNext()) {
 					
-					if(!StringUtils.startsWith(inputLine, "#")
-							|| StringUtils.containsNone(inputLine, getCsvLoadKey())) {
-						actionLoggerGeneric.fine("Looking at File : " + csvInFile.getName() + " and Line #" + lineIdx);
-						Map<String,String> tmpInputMapLine = obtainSpecifiedLineMap(tasCsvColNames, inputLine);
+					String inputLine = inputLinesIter.next();
+					lineIdx++;
+					
+					try {
 						
-						boolean sameLine = true;
-						List<String> keys = new ArrayList<String>(tmpFailedMapLine.keySet());
-						Collections.sort(keys);
-						Iterator<String> keysIter = keys.iterator();
-						while(sameLine &&  keysIter.hasNext()) {
-							String theKey = keysIter.next();
-							String stInputValue = tmpInputMapLine.get(theKey);
-							String stFailedValue = tmpFailedMapLine.get(theKey);
+						if(!StringUtils.startsWith(inputLine, "#")
+								|| StringUtils.containsNone(inputLine, getCsvLoadKey())) {
+							actionLoggerGeneric.fine("Looking at File : " + csvInFile.getName() + " and Line #" + lineIdx);
+							Map<String,String> tmpInputMapLine = obtainSpecifiedLineMap(tasCsvColNames, inputLine);
 							
-							if(!StringUtils.equals(stInputValue, stFailedValue)) {
-								sameLine = false;
+							boolean sameLine = true;
+							List<String> keys = new ArrayList<String>(tmpFailedMapLine.keySet());
+							Collections.sort(keys);
+							Iterator<String> keysIter = keys.iterator();
+							while(sameLine &&  keysIter.hasNext()) {
+								String theKey = keysIter.next();
+								String stInputValue = tmpInputMapLine.get(theKey);
+								String stFailedValue = tmpFailedMapLine.get(theKey);
+								
+								if(!StringUtils.equals(stInputValue, stFailedValue)) {
+									sameLine = false;
+								}
 							}
+							
+							if(sameLine) {
+								
+								foundLine = true;
+								actionLoggerGeneric.info("Found at File : " + csvInFile.getName() + " and Line #" + lineIdx);
+								
+								String objectId = obtainObjectLineId(tmpFailedMapLine);
+								actionLoggerGeneric.info("Line Object ID : " + objectId);
+								
+								/* proceed to update the Map that contains all the informations about the errors in the load */
+								updateCsvErrorFiles(csvErrorFiles, logFileIter,
+										csvInFile, lineIdx, objectId);
+								
+							}
+							
+							
 						}
 						
-						if(sameLine) {
-							
-							foundLine = true;
-							actionLoggerGeneric.info("Found at File : " + csvInFile.getName() + " and Line #" + lineIdx);
-							
-							String objectId = obtainObjectLineId(tmpFailedMapLine);
-							actionLoggerGeneric.info("Line Object ID : " + objectId);
-							
-							/* proceed to update the Map that contains all the informations about the errors in the load */
-							updateCsvErrorFiles(csvErrorFiles, logFileIter,
-									csvInFile, lineIdx, objectId);
-							
-						}
-						
-						
+					} catch (Exception le) {
+						actionLoggerGeneric.warning("Problem in input file : " + csvInFile.getName());
+						actionLoggerGeneric.warning("Problem comparing with line : " + inputLine);
 					}
-					
-				} catch (Exception le) {
-					actionLoggerGeneric.warning("Problem in input file : " + csvInFile.getName());
-					actionLoggerGeneric.warning("Problem comparing with line : " + inputLine);
 				}
+				
+			} catch (Exception ile) {	
+				
+				actionLoggerGeneric.severe("Problem reading line : " + ile.getMessage());
 			}
 			
 		}
@@ -551,18 +601,21 @@ public abstract class AbstractLogsProcessor implements LogsProcessor {
 	    /*
 	     * Proceed initialize all Folder Loggers (OK, KO and Generic). Assign the right handlers to them
 	     */
-	    String dateFormatGen = this.config.getString("logs_migration." + getCsvLoadKey() + ".logactiondateformat.gen", "yyyy-MM-dd HH:mm:ss");
-	 //   String dateFormatKO = this.config.getString("file_migration." + processorKey + ".logfolderdateformat.ko", "yyyy-MM-dd HH:mm:ss");
+	    String dateFormatGen = this.config.getString("logs_migration." + getCsvLoadKey() + ".logactiondateformat." + GEN_TOKEN, "yyyy-MM-dd HH:mm:ss");
+	    String dateFormatKO = this.config.getString("logs_migration." +  getCsvLoadKey() + ".logactiondateformat." + KO_TOKEN, "yyyy-MM-dd HH:mm:ss");
+	    String dateFormatOK = this.config.getString("logs_migration." +  getCsvLoadKey() + ".logactiondateformat." + OK_TOKEN, "yyyy-MM-dd HH:mm:ss");
+	    
 
-/*	    String fileOKName = fileFolder.getParentFile().getName() + F_SEPARATOR + fileFolder.getName() + F_SEPARATOR + OK_TOKEN + ".log";
-	    folderLoggerOK.addHandler(getLogFileHandler(fileOKName, dateFormatOK));
-
-	    String fileKOName = fileFolder.getParentFile().getName() + F_SEPARATOR + fileFolder.getName() + F_SEPARATOR + KO_TOKEN + ".log";
-	    folderLoggerKO.addHandler(getLogFileHandler(fileKOName, dateFormatKO)); */
-
-	    String fileGenName = getCsvLoadKey() + F_SEPARATOR + System.currentTimeMillis() + ".log";
+	    String fileGenName = getCsvLoadKey() + F_SEPARATOR + (String)context.get(Context.JVM_ID_KEY) + F_SEPARATOR + GEN_TOKEN + ".log";
 	    actionLoggerGeneric.addHandler(getLogFileHandler(fileGenName, dateFormatGen));
-
+	    
+	    String fileKOName = getCsvLoadKey() + F_SEPARATOR + (String)context.get(Context.JVM_ID_KEY) + F_SEPARATOR + KO_TOKEN + ".log";
+	    actionLoggerKO.addHandler(getLogFileHandler(fileKOName, dateFormatKO));
+	    
+	    String fileOKName = getCsvLoadKey() + F_SEPARATOR + (String)context.get(Context.JVM_ID_KEY) + F_SEPARATOR + OK_TOKEN + ".log";
+	    actionLoggerOK.addHandler(getLogFileHandler(fileOKName, dateFormatOK));
+	    
+	    
 	} catch (Exception e) {
 	    e.printStackTrace();
 	    throw new LogsMigrationException("Problem setting the Logs Loggers: ", e);

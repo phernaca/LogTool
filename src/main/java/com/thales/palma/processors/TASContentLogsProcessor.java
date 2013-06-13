@@ -5,6 +5,8 @@ package com.thales.palma.processors;
 
 import java.util.Map;
 
+import org.apache.commons.lang.StringUtils;
+
 /**
  * @author frup82635
  *
@@ -25,6 +27,21 @@ public class TASContentLogsProcessor extends TASDefaultLogsProcessor {
 		objectId.append(tmpCsvMapLine.get("07contentPath"));
 		
 		return objectId.toString();
+	}
+	
+	@Override
+	protected boolean isValueOmmited(String rawValue) {
+		
+		boolean isValOmmited = false;
+		
+		if( (StringUtils.equals(rawValue, "ECP") || (StringUtils.equals(rawValue, "RFD")))
+				|| 	StringUtils.startsWith(rawValue, "com.ptc.")	) {
+			
+			isValOmmited = true;
+		}
+		
+		
+		return isValOmmited;
 	}
 
 }

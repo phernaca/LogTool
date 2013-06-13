@@ -34,6 +34,26 @@ public interface LogsProcessor {
 	
 	
 	/**
+	 * GEN Token identifier
+	 */
+	public static final  String GEN_TOKEN = "gen";
+	
+	/**
+	 * KO Token identifier
+	 */
+	public static final  String KO_TOKEN = "ko";
+	
+	/**
+	 * OK Token identifier
+	 */
+	public static final String OK_TOKEN = "ok";
+	
+	/**
+	 * File TOKEN Separator
+	 */
+	public static String F_SEPARATOR = "_";
+	
+	/**
 	 * Initializes the implementation class with Objects containing 
 	 * all the needed information for processing (logs and input csv)files
 	 * @param config
