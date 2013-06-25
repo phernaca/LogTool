@@ -403,7 +403,8 @@ public abstract class AbstractLogsProcessor implements LogsProcessor {
 								String stInputValue = tmpInputMapLine.get(theKey);
 								String stFailedValue = tmpFailedMapLine.get(theKey);
 								
-								if(!StringUtils.equals(stInputValue, stFailedValue)) {
+								if( !StringUtils.equals(stInputValue, stFailedValue)
+										&& !(stInputValue==null && StringUtils.isEmpty(stFailedValue)) ) {
 									sameLine = false;
 								}
 							}
@@ -537,13 +538,13 @@ public abstract class AbstractLogsProcessor implements LogsProcessor {
 			if(sortedColNames.length+1 !=  filteredCsvValues.length) {
 				actionLoggerGeneric.warning("Col Names " + sortedColNames.length + " vs Col Values " + filteredCsvValues.length);
 			}
-			//else {
-				//split(failedLine, getCsvSeparator());
-				for(int i=1; i<filteredCsvValues.length; i++) {
-					
-					tmpCsvMapLine.put(sortedColNames[i-1], filteredCsvValues[i]);
-				}
-			//}
+			
+			
+			/* Proceed */
+			for(int i=1; i<filteredCsvValues.length; i++) {
+				
+				tmpCsvMapLine.put(sortedColNames[i-1], filteredCsvValues[i]);
+			}
 		}
 		
 		return tmpCsvMapLine;

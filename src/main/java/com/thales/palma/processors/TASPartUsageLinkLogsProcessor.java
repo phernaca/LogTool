@@ -62,6 +62,5 @@ public class TASPartUsageLinkLogsProcessor extends AbstractLogsProcessor {
 		actionLoggerGeneric.info("Error Description : " + descErrLogLine);
 		return descErrLogLine;
 	}
-	
 
 }
