@@ -53,7 +53,7 @@ public class TASDefaultLogsProcessor  extends AbstractLogsProcessor {
 	
 		
 		
-		List<String> filteredList = new ArrayList();
+		List<String> filteredList = new ArrayList<String>();
 		for(int i=0; i<rawValues.length; i++) {
 			if(!isValueOmmited(rawValues[i])) {
 				filteredList.add(rawValues[i]);

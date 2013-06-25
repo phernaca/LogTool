@@ -7,6 +7,7 @@ import org.apache.commons.lang.StringUtils;
 
 public class TASPartUsageLinkLogsProcessor extends AbstractLogsProcessor {
 
+	private static final String BOM_INPUT_SEP = "§";
 	private static final String UNIQUENESS_CONSTRAINT_VIOLATION = "wt.pom.UniquenessException: A datastore uniqueness constraint violation";
 
 	@Override
@@ -61,6 +62,11 @@ public class TASPartUsageLinkLogsProcessor extends AbstractLogsProcessor {
 		
 		actionLoggerGeneric.info("Error Description : " + descErrLogLine);
 		return descErrLogLine;
+	}
+	
+	@Override
+	protected String getInputCsvSeparator() {
+		return BOM_INPUT_SEP;
 	}
 
 }

@@ -288,7 +288,7 @@ public abstract class AbstractLogsProcessor implements LogsProcessor {
 		actionLoggerGeneric.info("Looking for failed : " + failedLine);
 		
 		/* First obtain the map with cols mapping the TAS csv format */
-		Map<String,String> tmpFailedMapLine = obtainSpecifiedLineMap(alphaSortedCsvColNames, failedLine);
+		Map<String,String> tmpFailedMapLine = obtainSpecifiedLineMap(alphaSortedCsvColNames, failedLine, getCsvSeparator());
 		
 		 
 		/* Proceed obtaining the input csv line and the matching error description */
@@ -371,6 +371,9 @@ public abstract class AbstractLogsProcessor implements LogsProcessor {
 		
 		boolean foundLine = false;
 		
+		/*Obtain encoding from configuration files */
+		String inputEncoding = this.config.getString("logs_migration.inputFiles.encoding", "UTF-8");
+		
 		Iterator<File> csvInIter = getCsvInputFiles().iterator();
 		while(!foundLine &&  csvInIter.hasNext()) {
 			
@@ -378,7 +381,7 @@ public abstract class AbstractLogsProcessor implements LogsProcessor {
 				
 				File csvInFile = csvInIter.next();
 				/* Obtain all the Input lines from a CSV and search for the failed one */
-				List<String> inputLines = FileUtils.readLines(csvInFile);
+				List<String> inputLines = FileUtils.readLines(csvInFile,inputEncoding);
 				
 				int lineIdx = 0;
 				Iterator<String> inputLinesIter = inputLines.iterator();
@@ -392,7 +395,7 @@ public abstract class AbstractLogsProcessor implements LogsProcessor {
 						if(!StringUtils.startsWith(inputLine, "#")
 								|| StringUtils.containsNone(inputLine, getCsvLoadKey())) {
 							actionLoggerGeneric.fine("Looking at File : " + csvInFile.getName() + " and Line #" + lineIdx);
-							Map<String,String> tmpInputMapLine = obtainSpecifiedLineMap(tasCsvColNames, inputLine);
+							Map<String,String> tmpInputMapLine = obtainSpecifiedLineMap(tasCsvColNames, inputLine, getInputCsvSeparator());
 							
 							boolean sameLine = true;
 							List<String> keys = new ArrayList<String>(tmpFailedMapLine.keySet());
@@ -522,11 +525,11 @@ public abstract class AbstractLogsProcessor implements LogsProcessor {
 	 * @param failedLine
 	 * @param tmpCsvMapLine
 	 */
-	private Map<String,String> obtainSpecifiedLineMap(String[] sortedColNames, String failedLine) {
+	private Map<String,String> obtainSpecifiedLineMap(String[] sortedColNames, String failedLine, String separator) {
 		
 		Map<String,String> tmpCsvMapLine = new HashMap<String,String>();
 		
-		String[] rawCsvValues = StringUtils.splitPreserveAllTokens(failedLine, getCsvSeparator());
+		String[] rawCsvValues = StringUtils.splitPreserveAllTokens(failedLine, separator);
 		
 		
 		
@@ -658,6 +661,10 @@ public abstract class AbstractLogsProcessor implements LogsProcessor {
 		return csvSeparator;
 	}
 
+	protected String getInputCsvSeparator() {
+		return getCsvSeparator();
+	}
+	
 	public boolean isConsolidateOutputFile() {
 		return consolidateOutputFile;
 	}
