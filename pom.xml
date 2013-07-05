@@ -59,6 +59,7 @@
                       <configuration>
                         <tasks>                    
                            <fixcrlf srcDir="target/classes/delivery/" includes="*.*sh" eol="lf" eof="remove" />
+                           <fixcrlf srcDir="target/classes/delivery/" includes="*.properties" eol="lf" eof="remove" />
                            <fixcrlf srcDir="target/classes/delivery/resources/" includes="*.properties" eol="lf" eof="remove" />
                            <fixcrlf srcDir="target/classes/delivery/resources/" includes="*.txt" eol="lf" eof="remove" />                      
                         </tasks>
@@ -201,6 +202,14 @@
 				<filtering>true</filtering>
 				<includes>
 					<include>*.*sh</include>					
+				</includes>				
+			</resource>	
+			<resource>
+				<directory>src/main/delivery</directory>
+				<targetPath>delivery</targetPath>
+				<filtering>true</filtering>
+				<includes>
+					<include>*.properties</include>					
 				</includes>				
 			</resource>	
 			<resource>

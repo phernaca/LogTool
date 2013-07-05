@@ -40,6 +40,7 @@
 			<outputDirectory>/</outputDirectory>
 			<includes>				
 				<include>*.*sh</include>
+				<include>*.properties</include>
 			</includes>
 			<excludes>
 				<exclude>*.bat</exclude>
